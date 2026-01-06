@@ -1,0 +1,430 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gaming Workshop Registration</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 15px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .form-container {
+            padding: 40px;
+        }
+        
+        .info-banner {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 5px solid #2196f3;
+        }
+        
+        .info-banner h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+        }
+        
+        .info-banner ul {
+            color: #424242;
+            margin-left: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e8ed;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: #fafafa;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .alert {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 10px;
+            font-weight: 500;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .slot-availability {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+        
+        .available {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .full {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 Gaming Workshop</h1>
+            <p>January 5 - March 31, 2024</p>
+            <p>Register now for the ultimate gaming experience!</p>
+        </div>
+        
+        <div class="form-container">
+            <div class="info-banner">
+                <h3>📋 Workshop Information</h3>
+                <ul>
+                    <li><strong>Duration:</strong> January 5 - March 31, 2024</li>
+                    <li><strong>Daily Hours:</strong> 8:00 AM - 8:00 PM</li>
+                    <li><strong>Session Length:</strong> 2 hours per slot</li>
+                    <li><strong>Capacity:</strong> Maximum 4 participants per slot</li>
+                    <li><strong>Games:</strong> 20+ popular titles available</li>
+                    <li><strong>Rule:</strong> One game per session</li>
+                </ul>
+            </div>
+            
+            <div id="alertContainer"></div>
+            
+            <form id="registrationForm">
+                <div class="form-group">
+                    <label for="name">👤 Full Name *</label>
+                    <input type="text" id="name" name="name" required placeholder="Enter your full name">
+                </div>
+                
+                <div class="form-group">
+                    <label for="wwid">🆔 WWID *</label>
+                    <input type="text" id="wwid" name="wwid" required placeholder="Enter your Work Week ID">
+                </div>
+                
+                <div class="form-group">
+                    <label for="email">📧 Email Address *</label>
+                    <input type="email" id="email" name="email" required placeholder="Enter your email address">
+                </div>
+                
+                <div class="form-group">
+                    <label for="preferredGame">🎯 Preferred Game *</label>
+                    <select id="preferredGame" name="preferredGame" required>
+                        <option value="">Select your preferred game</option>
+                        <option value="Shadow of the Tomb Raider">Shadow of the Tomb Raider (SOTTR)</option>
+                        <option value="Tiny Tina's Wonderlands">Tiny Tina's Wonderlands</option>
+                        <option value="Borderlands 3">Borderlands 3</option>
+                        <option value="Far Cry 6">Far Cry 6</option>
+                        <option value="Final Fantasy XIV">Final Fantasy XIV (FF14)</option>
+                        <option value="Naraka Bladepoint">Naraka: Bladepoint</option>
+                        <option value="Spider-Man Remastered">Spider-Man Remastered</option>
+                        <option value="Watch Dogs Legion">Watch Dogs: Legion</option>
+                        <option value="Cyberpunk 2077">Cyberpunk 2077</option>
+                        <option value="Assassin's Creed Valhalla">Assassin's Creed Valhalla</option>
+                        <option value="Call of Duty Modern Warfare II">Call of Duty: Modern Warfare II</option>
+                        <option value="Apex Legends">Apex Legends</option>
+                        <option value="Fortnite">Fortnite</option>
+                        <option value="Valorant">Valorant</option>
+                        <option value="League of Legends">League of Legends</option>
+                        <option value="Overwatch 2">Overwatch 2</option>
+                        <option value="Rocket League">Rocket League</option>
+                        <option value="Among Us">Among Us</option>
+                        <option value="Fall Guys">Fall Guys</option>
+                        <option value="Minecraft">Minecraft</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="date">📅 Preferred Date *</label>
+                    <input type="date" id="date" name="date" min="2024-01-05" max="2024-03-31" required>
+                    <div id="dateAvailability" class="slot-availability" style="display: none;">
+                        <span>Date availability:</span>
+                        <span id="dateStatus"></span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="timeSlot">⏰ Time Slot *</label>
+                    <select id="timeSlot" name="timeSlot" required>
+                        <option value="">Select time slot</option>
+                        <option value="08:00-10:00">08:00 AM - 10:00 AM</option>
+                        <option value="10:00-12:00">10:00 AM - 12:00 PM</option>
+                        <option value="12:00-14:00">12:00 PM - 02:00 PM</option>
+                        <option value="14:00-16:00">02:00 PM - 04:00 PM</option>
+                        <option value="16:00-18:00">04:00 PM - 06:00 PM</option>
+                        <option value="18:00-20:00">06:00 PM - 08:00 PM</option>
+                    </select>
+                    <div id="slotAvailability" class="slot-availability" style="display: none;">
+                        <span>Slot availability:</span>
+                        <span id="slotStatus"></span>
+                    </div>
+                </div>
+                
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    🚀 Register for Workshop
+                </button>
+            </form>
+        </div>
+        
+        <div class="footer">
+            <p>© 2024 Gaming Workshop. All rights reserved.</p>
+            <p>For support, contact: workshop@company.com</p>
+        </div>
+    </div>
+
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Show alert message
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = `
+                <div class="alert alert-${type}">
+                    ${message}
+                </div>
+            `;
+            setTimeout(() => {
+                alertContainer.innerHTML = '';
+            }, 8000);
+        }
+
+        // Check slot availability
+        async function checkSlotAvailability(date, timeSlot) {
+            try {
+                const { data, error } = await supabase
+                    .from('registrations')
+                    .select('id')
+                    .eq('date', date)
+                    .eq('time_slot', timeSlot);
+
+                if (error) throw error;
+                return { count: data.length, available: data.length < 4 };
+            } catch (error) {
+                console.error('Error checking availability:', error);
+                return { count: 0, available: true };
+            }
+        }
+
+        // Update slot availability display
+        async function updateSlotAvailability() {
+            const date = document.getElementById('date').value;
+            const timeSlot = document.getElementById('timeSlot').value;
+            
+            if (date && timeSlot) {
+                const availability = await checkSlotAvailability(date, timeSlot);
+                const slotAvailability = document.getElementById('slotAvailability');
+                const slotStatus = document.getElementById('slotStatus');
+                
+                slotAvailability.style.display = 'flex';
+                
+                if (availability.available) {
+                    slotStatus.innerHTML = `<span class="available">Available (${availability.count}/4)</span>`;
+                } else {
+                    slotStatus.innerHTML = `<span class="full">FULL (${availability.count}/4)</span>`;
+                }
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('registrationForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading"></span> Registering...';
+            
+            const formData = new FormData(this);
+            const registration = {
+                name: formData.get('name'),
+                wwid: formData.get('wwid'),
+                email: formData.get('email'),
+                preferred_game: formData.get('preferredGame'),
+                date: formData.get('date'),
+                time_slot: formData.get('timeSlot'),
+                status: 'registered',
+                created_at: new Date().toISOString()
+            };
+
+            try {
+                // Check if WWID already exists
+                const { data: existingUser } = await supabase
+                    .from('registrations')
+                    .select('wwid')
+                    .eq('wwid', registration.wwid)
+                    .single();
+
+                if (existingUser) {
+                    throw new Error('WWID already registered! Each person can register only once.');
+                }
+
+                // Check slot availability
+                const availability = await checkSlotAvailability(registration.date, registration.time_slot);
+                if (!availability.available) {
+                    throw new Error('Selected time slot is full! Please choose another slot.');
+                }
+
+                // Insert registration
+                const { data, error } = await supabase
+                    .from('registrations')
+                    .insert([registration])
+                    .select();
+
+                if (error) throw error;
+
+                showAlert(`✅ Registration successful! Welcome ${registration.name}. Your slot: ${registration.date} at ${registration.time_slot}. Check your email for confirmation.`, 'success');
+                
+                // Reset form
+                this.reset();
+                document.getElementById('slotAvailability').style.display = 'none';
+
+            } catch (error) {
+                showAlert(`❌ Registration failed: ${error.message}`, 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '🚀 Register for Workshop';
+            }
+        });
+
+        // Event listeners for availability checking
+        document.getElementById('date').addEventListener('change', updateSlotAvailability);
+        document.getElementById('timeSlot').addEventListener('change', updateSlotAvailability);
+
+        // Set minimum date to today
+        document.getElementById('date').min = new Date().toISOString().split('T')[0];
+    </script>
+</body>
+</html>
