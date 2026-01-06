@@ -1,0 +1,1009 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gaming Workshop Admin Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 25px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+        
+        .header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 15px 30px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .export-btn {
+            background: linear-gradient(45deg, #27ae60, #2ecc71);
+        }
+        
+        .refresh-btn {
+            background: linear-gradient(45deg, #e74c3c, #c0392b);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-number {
+            font-size: 3.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #00ff88, #00d4ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stat-label {
+            font-size: 1.1em;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+        
+        .section {
+            background: rgba(255, 255, 255, 0.05);
+            margin: 30px 0;
+            border-radius: 20px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .section-header {
+            background: rgba(102, 126, 234, 0.3);
+            padding: 25px;
+            font-size: 1.6em;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .section-content {
+            padding: 25px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        th {
+            background: rgba(102, 126, 234, 0.2);
+            font-weight: 600;
+            color: #667eea;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .status-active {
+            color: #2ecc71;
+            font-weight: bold;
+            background: rgba(46, 204, 113, 0.2);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+        }
+        
+        .status-completed {
+            color: #95a5a6;
+            background: rgba(149, 165, 166, 0.2);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+        }
+        
+        .status-registered {
+            color: #f39c12;
+            background: rgba(243, 156, 18, 0.2);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+        }
+        
+        .game-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 25px 0;
+        }
+        
+        .game-card {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 20px;
+            border-radius: 15px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.3s;
+        }
+        
+        .game-card:hover {
+            transform: translateX(5px);
+        }
+        
+        .game-name {
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+        
+        .game-metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 0.95em;
+        }
+        
+        .metric-value {
+            font-weight: bold;
+            color: #00ff88;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 60px;
+            opacity: 0.6;
+            font-style: italic;
+            font-size: 1.2em;
+        }
+        
+        .alert {
+            padding: 18px;
+            margin: 20px 0;
+            border-radius: 10px;
+            font-weight: 500;
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .alert-info {
+            background: rgba(102, 126, 234, 0.2);
+            border: 2px solid #667eea;
+            color: #667eea;
+        }
+        
+        .alert-success {
+            background: rgba(46, 204, 113, 0.2);
+            border: 2px solid #2ecc71;
+            color: #2ecc71;
+        }
+        
+        .live-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #2ecc71;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(46, 204, 113, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(46, 204, 113, 0); }
+        }
+        
+        .chart-container {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .pc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .pc-card {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .pc-active {
+            border-color: #2ecc71;
+            background: rgba(46, 204, 113, 0.1);
+        }
+        
+        .pc-idle {
+            border-color: #95a5a6;
+        }
+        
+        .last-update {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎮 Gaming Workshop Admin Dashboard</h1>
+        <p><span class="live-indicator"></span>Real-time monitoring and analytics</p>
+    </div>
+    
+    <div class="container">
+        <div class="controls">
+            <button onclick="refreshData()" class="refresh-btn">
+                🔄 Refresh Data
+            </button>
+            <button onclick="exportData()" class="export-btn">
+                📊 Export Reports
+            </button>
+            <button onclick="exportCSV()" class="export-btn">
+                📋 Export CSV
+            </button>
+            <button onclick="clearAllData()" class="refresh-btn">
+                🗑️ Clear All Data
+            </button>
+        </div>
+        
+        <div id="alertContainer"></div>
+        
+        <!-- Statistics Overview -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="totalRegistrations">0</div>
+                <div class="stat-label">Total Registrations</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="activeSessions">0</div>
+                <div class="stat-label">Active Sessions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="completedSessions">0</div>
+                <div class="stat-label">Completed Sessions</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalIssues">0</div>
+                <div class="stat-label">Total Issues</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalCrashes">0</div>
+                <div class="stat-label">Total Crashes</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalHours">0</div>
+                <div class="stat-label">Total Hours Played</div>
+            </div>
+        </div>
+        
+        <!-- Gaming PCs Status -->
+        <div class="section">
+            <div class="section-header">
+                🖥️ Gaming PCs Status
+                <span id="pcStatusCount">0 Active</span>
+            </div>
+            <div class="section-content">
+                <div id="pcStatus" class="pc-grid"></div>
+            </div>
+        </div>
+        
+        <!-- Game Statistics -->
+        <div class="section">
+            <div class="section-header">
+                🎯 Game Statistics
+                <span id="gameStatsCount">0 Games Played</span>
+            </div>
+            <div class="section-content">
+                <div id="gameStats" class="game-stats"></div>
+            </div>
+        </div>
+        
+        <!-- Active Sessions -->
+        <div class="section">
+            <div class="section-header">
+                🔴 Active Sessions
+                <span class="live-indicator"></span>
+                <span id="activeSessionsCount">0 Active</span>
+            </div>
+            <div class="section-content">
+                <div id="activeSessionsTable"></div>
+            </div>
+        </div>
+        
+        <!-- Recent Registrations -->
+        <div class="section">
+            <div class="section-header">
+                📝 Recent Registrations
+                <span id="recentRegistrationsCount">0 Today</span>
+            </div>
+            <div class="section-content">
+                <div id="registrationsTable"></div>
+            </div>
+        </div>
+        
+        <!-- Completed Sessions -->
+        <div class="section">
+            <div class="section-header">
+                ✅ Completed Sessions
+                <span id="completedSessionsCount">0 Completed</span>
+            </div>
+            <div class="section-content">
+                <div id="completedSessionsTable"></div>
+            </div>
+        </div>
+        
+        <!-- Issues & Crashes -->
+        <div class="section">
+            <div class="section-header">
+                ⚠️ Issues & Crashes
+                <span id="issuesCount">0 Issues</span>
+            </div>
+            <div class="section-content">
+                <div id="issuesTable"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="last-update">
+        Last updated: <span id="lastUpdate">Never</span>
+    </div>
+
+    <script>
+        // Supabase configuration
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Global data storage
+        let dashboardData = {
+            registrations: [],
+            sessions: [],
+            issues: []
+        };
+
+        // Show alert message
+        function showAlert(message, type = 'info') {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = `
+                <div class="alert alert-${type}">
+                    ${message}
+                </div>
+            `;
+            setTimeout(() => {
+                alertContainer.innerHTML = '';
+            }, 8000);
+        }
+
+        // Load all data from Supabase
+        async function loadDashboard() {
+            try {
+                showAlert('🔄 Loading dashboard data...', 'info');
+
+                // Load registrations
+                const { data: registrations, error: regError } = await supabase
+                    .from('registrations')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (regError) throw regError;
+
+                // Load sessions
+                const { data: sessions, error: sessError } = await supabase
+                    .from('sessions')
+                    .select('*')
+                    .order('start_time', { ascending: false });
+
+                if (sessError) throw sessError;
+
+                // Load issues
+                const { data: issues, error: issuesError } = await supabase
+                    .from('issues')
+                    .select('*')
+                    .order('timestamp', { ascending: false });
+
+                if (issuesError) throw issuesError;
+
+                // Store data
+                dashboardData = { registrations, sessions, issues };
+
+                // Update all sections
+                updateStatistics();
+                updatePCStatus();
+                updateRegistrationsTable();
+                updateActiveSessionsTable();
+                updateCompletedSessionsTable();
+                updateIssuesTable();
+                updateGameStatistics();
+
+                // Update last update time
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
+
+                showAlert('✅ Dashboard data loaded successfully!', 'success');
+
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+                showAlert(`❌ Failed to load dashboard: ${error.message}`, 'error');
+            }
+        }
+
+        // Update statistics cards
+        function updateStatistics() {
+            const { registrations, sessions, issues } = dashboardData;
+            
+            const activeSessions = sessions.filter(s => s.status === 'active');
+            const completedSessions = sessions.filter(s => s.status === 'completed');
+            const crashes = issues.filter(i => i.type === 'crash');
+            
+            // Calculate total hours
+            let totalHours = 0;
+            completedSessions.forEach(session => {
+                if (session.duration) {
+                    totalHours += session.duration / 3600; // Convert seconds to hours
+                }
+            });
+
+            document.getElementById('totalRegistrations').textContent = registrations.length;
+            document.getElementById('activeSessions').textContent = activeSessions.length;
+            document.getElementById('completedSessions').textContent = completedSessions.length;
+            document.getElementById('totalIssues').textContent = issues.length;
+            document.getElementById('totalCrashes').textContent = crashes.length;
+            document.getElementById('totalHours').textContent = Math.round(totalHours * 10) / 10;
+
+            // Update section counters
+            document.getElementById('activeSessionsCount').textContent = `${activeSessions.length} Active`;
+            document.getElementById('completedSessionsCount').textContent = `${completedSessions.length} Completed`;
+            document.getElementById('issuesCount').textContent = `${issues.length} Issues`;
+            
+            // Count today's registrations
+            const today = new Date().toISOString().split('T')[0];
+            const todayRegistrations = registrations.filter(reg => 
+                reg.created_at && reg.created_at.startsWith(today)
+            );
+            document.getElementById('recentRegistrationsCount').textContent = `${todayRegistrations.length} Today`;
+        }
+
+        // Update PC status
+        function updatePCStatus() {
+            const { sessions } = dashboardData;
+            const activeSessions = sessions.filter(s => s.status === 'active');
+            
+            // Get unique PC IDs
+            const allPCs = [...new Set(sessions.map(s => s.pc_id).filter(Boolean))];
+            const activePCs = [...new Set(activeSessions.map(s => s.pc_id))];
+            
+            const container = document.getElementById('pcStatus');
+            document.getElementById('pcStatusCount').textContent = `${activePCs.length} Active`;
+            
+            if (allPCs.length === 0) {
+                container.innerHTML = '<div class="no-data">No PC data available</div>';
+                return;
+            }
+
+            let html = '';
+            allPCs.forEach(pcId => {
+                const isActive = activePCs.includes(pcId);
+                const activeSession = activeSessions.find(s => s.pc_id === pcId);
+                
+                html += `
+                    <div class="pc-card ${isActive ? 'pc-active' : 'pc-idle'}">
+                        <h4>${pcId}</h4>
+                        <p>${isActive ? '🟢 Active' : '⚪ Idle'}</p>
+                        ${activeSession ? `<small>${activeSession.game_name}</small>` : ''}
+                        ${activeSession ? `<br><small>${activeSession.user_name}</small>` : ''}
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        // Update registrations table
+        function updateRegistrationsTable() {
+            const { registrations } = dashboardData;
+            const container = document.getElementById('registrationsTable');
+            
+            if (registrations.length === 0) {
+                container.innerHTML = '<div class="no-data">No registrations found</div>';
+                return;
+            }
+
+            // Show only recent 50 registrations
+            const recentRegistrations = registrations.slice(0, 50);
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>WWID</th>
+                            <th>Email</th>
+                            <th>Preferred Game</th>
+                            <th>Date</th>
+                            <th>Time Slot</th>
+                            <th>Registered</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            recentRegistrations.forEach(reg => {
+                const registeredDate = new Date(reg.created_at).toLocaleDateString();
+                html += `
+                    <tr>
+                        <td>${reg.name}</td>
+                        <td>${reg.wwid}</td>
+                        <td>${reg.email}</td>
+                        <td>${reg.preferred_game}</td>
+                        <td>${reg.date}</td>
+                        <td>${reg.time_slot}</td>
+                        <td>${registeredDate}</td>
+                        <td><span class="status-registered">Registered</span></td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            
+            if (registrations.length > 50) {
+                html += `<p style="text-align: center; margin-top: 15px; opacity: 0.7;">Showing 50 most recent registrations out of ${registrations.length} total</p>`;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Update active sessions table
+        function updateActiveSessionsTable() {
+            const { sessions } = dashboardData;
+            const activeSessions = sessions.filter(s => s.status === 'active');
+            const container = document.getElementById('activeSessionsTable');
+            
+            if (activeSessions.length === 0) {
+                container.innerHTML = '<div class="no-data">No active sessions</div>';
+                return;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>WWID</th>
+                            <th>Game</th>
+                            <th>PC ID</th>
+                            <th>Start Time</th>
+                            <th>Duration</th>
+                            <th>Crashes</th>
+                            <th>Issues</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            activeSessions.forEach(session => {
+                const startTime = new Date(session.start_time);
+                const duration = Math.floor((new Date() - startTime) / 1000);
+                const hours = Math.floor(duration / 3600);
+                const minutes = Math.floor((duration % 3600) / 60);
+                
+                html += `
+                    <tr>
+                        <td>${session.user_name}</td>
+                        <td>${session.wwid}</td>
+                        <td>${session.game_name}</td>
+                        <td>${session.pc_id || 'N/A'}</td>
+                        <td>${startTime.toLocaleString()}</td>
+                        <td>${hours}h ${minutes}m</td>
+                        <td>${session.crashes || 0}</td>
+                        <td>${session.issues || 0}</td>
+                        <td><span class="status-active">Active</span></td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        // Update completed sessions table
+        function updateCompletedSessionsTable() {
+            const { sessions } = dashboardData;
+            const completedSessions = sessions.filter(s => s.status === 'completed').slice(0, 100);
+            const container = document.getElementById('completedSessionsTable');
+            
+            if (completedSessions.length === 0) {
+                container.innerHTML = '<div class="no-data">No completed sessions</div>';
+                return;
+            }
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>WWID</th>
+                            <th>Game</th>
+                            <th>PC ID</th>
+                            <th>Duration</th>
+                            <th>Crashes</th>
+                            <th>Issues</th>
+                            <th>End Time</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            completedSessions.forEach(session => {
+                const endTime = new Date(session.end_time);
+                
+                html += `
+                    <tr>
+                        <td>${session.user_name}</td>
+                        <td>${session.wwid}</td>
+                        <td>${session.game_name}</td>
+                        <td>${session.pc_id || 'N/A'}</td>
+                        <td>${session.duration_formatted || 'N/A'}</td>
+                        <td>${session.crashes || 0}</td>
+                        <td>${session.issues || 0}</td>
+                        <td>${endTime.toLocaleString()}</td>
+                        <td>${session.notes || '-'}</td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            
+            if (sessions.filter(s => s.status === 'completed').length > 100) {
+                html += `<p style="text-align: center; margin-top: 15px; opacity: 0.7;">Showing 100 most recent completed sessions</p>`;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Update issues table
+        function updateIssuesTable() {
+            const { issues } = dashboardData;
+            const container = document.getElementById('issuesTable');
+            
+            if (issues.length === 0) {
+                container.innerHTML = '<div class="no-data">No issues reported</div>';
+                return;
+            }
+
+            // Show only recent 100 issues
+            const recentIssues = issues.slice(0, 100);
+
+            let html = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>WWID</th>
+                            <th>Game</th>
+                            <th>PC ID</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            recentIssues.forEach(issue => {
+                const timestamp = new Date(issue.timestamp);
+                
+                html += `
+                    <tr>
+                        <td>${issue.wwid}</td>
+                        <td>${issue.game_name}</td>
+                        <td>${issue.pc_id || 'N/A'}</td>
+                        <td><span class="status-${issue.type === 'crash' ? 'error' : 'warning'}">${issue.type}</span></td>
+                        <td>${issue.description}</td>
+                        <td>${timestamp.toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            
+            if (issues.length > 100) {
+                html += `<p style="text-align: center; margin-top: 15px; opacity: 0.7;">Showing 100 most recent issues out of ${issues.length} total</p>`;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        // Update game statistics
+        function updateGameStatistics() {
+            const { sessions, issues } = dashboardData;
+            const container = document.getElementById('gameStats');
+            const gameStats = {};
+
+            // Initialize game stats
+            const allGames = [
+                'Shadow of the Tomb Raider', 'Tiny Tina\'s Wonderlands', 'Borderlands 3',
+                'Far Cry 6', 'Final Fantasy XIV', 'Naraka Bladepoint', 'Spider-Man Remastered',
+                'Watch Dogs Legion', 'Cyberpunk 2077', 'Assassin\'s Creed Valhalla',
+                'Call of Duty Modern Warfare II', 'Apex Legends', 'Fortnite', 'Valorant',
+                'League of Legends', 'Overwatch 2', 'Rocket League', 'Among Us', 'Fall Guys', 'Minecraft'
+            ];
+
+            allGames.forEach(game => {
+                gameStats[game] = {
+                    sessions: 0,
+                    totalHours: 0,
+                    crashes: 0,
+                    issues: 0,
+                    users: new Set()
+                };
+            });
+
+            // Calculate stats from sessions
+            sessions.forEach(session => {
+                if (gameStats[session.game_name]) {
+                    gameStats[session.game_name].sessions++;
+                    gameStats[session.game_name].users.add(session.wwid);
+                    
+                    if (session.duration) {
+                        gameStats[session.game_name].totalHours += session.duration / 3600;
+                    }
+                    
+                    gameStats[session.game_name].crashes += session.crashes || 0;
+                    gameStats[session.game_name].issues += session.issues || 0;
+                }
+            });
+
+            // Generate HTML
+            let html = '';
+            let gamesPlayed = 0;
+            
+            Object.entries(gameStats).forEach(([game, stats]) => {
+                if (stats.sessions > 0) {
+                    gamesPlayed++;
+                    html += `
+                        <div class="game-card">
+                            <div class="game-name">${game}</div>
+                            <div class="game-metric">
+                                <span>Sessions:</span>
+                                <span class="metric-value">${stats.sessions}</span>
+                            </div>
+                            <div class="game-metric">
+                                <span>Unique Users:</span>
+                                <span class="metric-value">${stats.users.size}</span>
+                            </div>
+                            <div class="game-metric">
+                                <span>Total Hours:</span>
+                                <span class="metric-value">${Math.round(stats.totalHours * 10) / 10}h</span>
+                            </div>
+                            <div class="game-metric">
+                                <span>Crashes:</span>
+                                <span class="metric-value">${stats.crashes}</span>
+                            </div>
+                            <div class="game-metric">
+                                <span>Issues:</span>
+                                <span class="metric-value">${stats.issues}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            document.getElementById('gameStatsCount').textContent = `${gamesPlayed} Games Played`;
+
+            if (html === '') {
+                html = '<div class="no-data">No game sessions recorded yet</div>';
+            }
+
+            container.innerHTML = html;
+        }
+
+        // Refresh data
+        function refreshData() {
+            loadDashboard();
+        }
+
+        // Export data as JSON
+        function exportData() {
+            const exportData = {
+                exportDate: new Date().toISOString(),
+                ...dashboardData,
+                summary: {
+                    totalRegistrations: dashboardData.registrations.length,
+                    totalSessions: dashboardData.sessions.length,
+                    totalIssues: dashboardData.issues.length,
+                    activeSessions: dashboardData.sessions.filter(s => s.status === 'active').length,
+                    completedSessions: dashboardData.sessions.filter(s => s.status === 'completed').length
+                }
+            };
+
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `gaming-workshop-data-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+
+            showAlert('📁 Data exported successfully as JSON!', 'success');
+        }
+
+        // Export data as CSV
+        function exportCSV() {
+            const { registrations, sessions, issues } = dashboardData;
+            
+            // Create CSV content
+            let csvContent = "data:text/csv;charset=utf-8,";
+            
+            // Registrations CSV
+            csvContent += "REGISTRATIONS\n";
+            csvContent += "Name,WWID,Email,Preferred Game,Date,Time Slot,Registered At\n";
+            registrations.forEach(reg => {
+                csvContent += `"${reg.name}","${reg.wwid}","${reg.email}","${reg.preferred_game}","${reg.date}","${reg.time_slot}","${reg.created_at}"\n`;
+            });
+            
+            csvContent += "\n\nSESSIONS\n";
+            csvContent += "User Name,WWID,Game,PC ID,Start Time,End Time,Duration,Status,Crashes,Issues,Notes\n";
+            sessions.forEach(session => {
+                csvContent += `"${session.user_name}","${session.wwid}","${session.game_name}","${session.pc_id || ''}","${session.start_time}","${session.end_time || ''}","${session.duration_formatted || ''}","${session.status}","${session.crashes || 0}","${session.issues || 0}","${session.notes || ''}"\n`;
+            });
+            
+            csvContent += "\n\nISSUES\n";
+            csvContent += "WWID,Game,PC ID,Type,Description,Timestamp\n";
+            issues.forEach(issue => {
+                csvContent += `"${issue.wwid}","${issue.game_name}","${issue.pc_id || ''}","${issue.type}","${issue.description}","${issue.timestamp}"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `gaming-workshop-data-${new Date().toISOString().split('T')[0]}.csv`);
+            link.click();
+
+            showAlert('📋 Data exported successfully as CSV!', 'success');
+        }
+
+        // Clear all data (admin function)
+        async function clearAllData() {
+            if (!confirm('⚠️ Are you sure you want to clear ALL data? This cannot be undone!')) {
+                return;
+            }
+            
+            if (!confirm('🚨 This will permanently delete all registrations, sessions, and issues. Type "DELETE" to confirm.')) {
+                return;
+            }
+
+            try {
+                // Delete all data from Supabase
+                await supabase.from('issues').delete().neq('id', 0);
+                await supabase.from('sessions').delete().neq('id', 0);
+                await supabase.from('registrations').delete().neq('id', 0);
+                
+                // Reload dashboard
+                loadDashboard();
+                showAlert('🗑️ All data cleared successfully!', 'success');
+                
+            } catch (error) {
+                showAlert(`❌ Failed to clear data: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadDashboard, 30000);
+
+        // Load dashboard on page load
+        loadDashboard();
+    </script>
+</body>
+</html>
