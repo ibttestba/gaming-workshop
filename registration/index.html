@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -148,10 +148,10 @@
             border: 1px solid #f5c6cb;
         }
         
-        .alert-warning {
-            background: #fff3cd;
-            color: #856404;
-            border: 1px solid #ffeaa7;
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
         }
         
         .slot-availability {
@@ -197,6 +197,16 @@
             color: #666;
             font-size: 14px;
         }
+        
+        .debug-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: monospace;
+            font-size: 12px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -221,6 +231,7 @@
             </div>
             
             <div id="alertContainer"></div>
+            <div id="debugInfo" class="debug-info" style="display: none;"></div>
             
             <form id="registrationForm">
                 <div class="form-group">
@@ -294,6 +305,10 @@
                 <button type="submit" class="submit-btn" id="submitBtn">
                     🚀 Register for Workshop
                 </button>
+                
+                <button type="button" onclick="testConnection()" style="margin-top: 10px; background: #6c757d;">
+                    🔧 Test Database Connection
+                </button>
             </form>
         </div>
         
@@ -304,10 +319,19 @@
     </div>
 
     <script>
-        // Supabase configuration
+        // ⚠️ REPLACE THESE WITH YOUR ACTUAL SUPABASE CREDENTIALS
         const SUPABASE_URL = 'https://sinxwwyybbmiawvyiolb.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpbnh3d3l5YmJtaWF3dnlpb2xiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2ODEwNTgsImV4cCI6MjA4MzI1NzA1OH0.Hwesaju26-i9bEQRQjXXCIDMKFhuvEcA3jP3lhzF4nY';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Initialize Supabase
+        let supabase;
+        try {
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            console.log('✅ Supabase initialized successfully');
+        } catch (error) {
+            console.error('❌ Failed to initialize Supabase:', error);
+            showAlert('❌ Database connection failed. Please check configuration.', 'error');
+        }
 
         // Show alert message
         function showAlert(message, type) {
@@ -317,24 +341,70 @@
                     ${message}
                 </div>
             `;
+            
+            // Auto-hide after 8 seconds
             setTimeout(() => {
                 alertContainer.innerHTML = '';
             }, 8000);
         }
 
+        // Show debug info
+        function showDebug(message) {
+            const debugInfo = document.getElementById('debugInfo');
+            debugInfo.style.display = 'block';
+            debugInfo.innerHTML += `<div>${new Date().toLocaleTimeString()}: ${message}</div>`;
+            console.log('DEBUG:', message);
+        }
+
+        // Test database connection
+        async function testConnection() {
+            showAlert('🔄 Testing database connection...', 'info');
+            showDebug('Starting connection test...');
+            
+            try {
+                showDebug(`URL: ${SUPABASE_URL}`);
+                showDebug(`Key: ${SUPABASE_ANON_KEY.substring(0, 20)}...`);
+                
+                // Test basic connection
+                const { data, error } = await supabase
+                    .from('registrations')
+                    .select('count')
+                    .limit(1);
+                    
+                if (error) {
+                    showDebug(`Database error: ${error.message}`);
+                    showAlert(`❌ Database error: ${error.message}`, 'error');
+                } else {
+                    showDebug('Connection successful!');
+                    showAlert('✅ Database connection successful!', 'success');
+                }
+            } catch (err) {
+                showDebug(`Connection failed: ${err.message}`);
+                showAlert(`❌ Connection failed: ${err.message}`, 'error');
+            }
+        }
+
         // Check slot availability
         async function checkSlotAvailability(date, timeSlot) {
             try {
+                showDebug(`Checking availability for ${date} ${timeSlot}`);
+                
                 const { data, error } = await supabase
                     .from('registrations')
                     .select('id')
                     .eq('date', date)
                     .eq('time_slot', timeSlot);
 
-                if (error) throw error;
+                if (error) {
+                    showDebug(`Availability check error: ${error.message}`);
+                    throw error;
+                }
+                
+                showDebug(`Found ${data.length} registrations for this slot`);
                 return { count: data.length, available: data.length < 4 };
             } catch (error) {
                 console.error('Error checking availability:', error);
+                showDebug(`Availability check failed: ${error.message}`);
                 return { count: 0, available: true };
             }
         }
@@ -345,16 +415,20 @@
             const timeSlot = document.getElementById('timeSlot').value;
             
             if (date && timeSlot) {
-                const availability = await checkSlotAvailability(date, timeSlot);
-                const slotAvailability = document.getElementById('slotAvailability');
-                const slotStatus = document.getElementById('slotStatus');
-                
-                slotAvailability.style.display = 'flex';
-                
-                if (availability.available) {
-                    slotStatus.innerHTML = `<span class="available">Available (${availability.count}/4)</span>`;
-                } else {
-                    slotStatus.innerHTML = `<span class="full">FULL (${availability.count}/4)</span>`;
+                try {
+                    const availability = await checkSlotAvailability(date, timeSlot);
+                    const slotAvailability = document.getElementById('slotAvailability');
+                    const slotStatus = document.getElementById('slotStatus');
+                    
+                    slotAvailability.style.display = 'flex';
+                    
+                    if (availability.available) {
+                        slotStatus.innerHTML = `<span class="available">Available (${availability.count}/4)</span>`;
+                    } else {
+                        slotStatus.innerHTML = `<span class="full">FULL (${availability.count}/4)</span>`;
+                    }
+                } catch (error) {
+                    showDebug(`Slot availability update failed: ${error.message}`);
                 }
             }
         }
@@ -366,6 +440,8 @@
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="loading"></span> Registering...';
+            
+            showDebug('Form submission started...');
             
             const formData = new FormData(this);
             const registration = {
@@ -379,32 +455,46 @@
                 created_at: new Date().toISOString()
             };
 
+            showDebug(`Registration data: ${JSON.stringify(registration)}`);
+
             try {
                 // Check if WWID already exists
-                const { data: existingUser } = await supabase
+                showDebug('Checking for existing WWID...');
+                const { data: existingUser, error: checkError } = await supabase
                     .from('registrations')
                     .select('wwid')
                     .eq('wwid', registration.wwid)
                     .single();
+
+                if (checkError && checkError.code !== 'PGRST116') {
+                    // PGRST116 means no rows found, which is what we want
+                    throw checkError;
+                }
 
                 if (existingUser) {
                     throw new Error('WWID already registered! Each person can register only once.');
                 }
 
                 // Check slot availability
+                showDebug('Checking slot availability...');
                 const availability = await checkSlotAvailability(registration.date, registration.time_slot);
                 if (!availability.available) {
                     throw new Error('Selected time slot is full! Please choose another slot.');
                 }
 
                 // Insert registration
+                showDebug('Inserting registration...');
                 const { data, error } = await supabase
                     .from('registrations')
                     .insert([registration])
                     .select();
 
-                if (error) throw error;
+                if (error) {
+                    showDebug(`Insert error: ${error.message}`);
+                    throw error;
+                }
 
+                showDebug('Registration successful!');
                 showAlert(`✅ Registration successful! Welcome ${registration.name}. Your slot: ${registration.date} at ${registration.time_slot}. Check your email for confirmation.`, 'success');
                 
                 // Reset form
@@ -412,6 +502,7 @@
                 document.getElementById('slotAvailability').style.display = 'none';
 
             } catch (error) {
+                showDebug(`Registration failed: ${error.message}`);
                 showAlert(`❌ Registration failed: ${error.message}`, 'error');
             } finally {
                 submitBtn.disabled = false;
@@ -425,7 +516,11 @@
 
         // Set minimum date to today
         document.getElementById('date').min = new Date().toISOString().split('T')[0];
+
+        // Test connection on page load
+        window.addEventListener('load', function() {
+            setTimeout(testConnection, 1000);
+        });
     </script>
 </body>
-
 </html>
