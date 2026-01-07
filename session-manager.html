@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -86,6 +86,7 @@
             color: white;
             font-size: 16px;
             transition: all 0.3s;
+            box-sizing: border-box;
         }
         
         input::placeholder {
@@ -369,26 +370,26 @@
                     <label for="gameSelect">🎯 Select Game for This Session:</label>
                     <select id="gameSelect">
                         <option value="">Choose a game to play...</option>
-                        <option value="Shadow of the Tomb Raider">Shadow of the Tomb Raider (SOTTR)</option>
-                        <option value="Tiny Tina's Wonderlands">Tiny Tina's Wonderlands</option>
+                        <option value="SOTTR">Shadow of the Tomb Raider (SOTTR)</option>
+                        <option value="Tiny Tina">Tiny Tina's Wonderlands</option>
                         <option value="Borderlands 3">Borderlands 3</option>
+                        <option value="Remnant 2">Remnant 2</option>
                         <option value="Far Cry 6">Far Cry 6</option>
-                        <option value="Final Fantasy XIV">Final Fantasy XIV (FF14)</option>
-                        <option value="Naraka Bladepoint">Naraka: Bladepoint</option>
+                        <option value="FF14">Final Fantasy XIV (FF14)</option>
+                        <option value="Little Nightmares 3">Little Nightmares 3</option>
+                        <option value="Hogwarts">Hogwarts Legacy</option>
+                        <option value="Homeworld 3">Homeworld 3</option>
                         <option value="Spider-Man Remastered">Spider-Man Remastered</option>
-                        <option value="Watch Dogs Legion">Watch Dogs: Legion</option>
-                        <option value="Cyberpunk 2077">Cyberpunk 2077</option>
-                        <option value="Assassin's Creed Valhalla">Assassin's Creed Valhalla</option>
-                        <option value="Call of Duty Modern Warfare II">Call of Duty: Modern Warfare II</option>
-                        <option value="Apex Legends">Apex Legends</option>
-                        <option value="Fortnite">Fortnite</option>
-                        <option value="Valorant">Valorant</option>
-                        <option value="League of Legends">League of Legends</option>
-                        <option value="Overwatch 2">Overwatch 2</option>
-                        <option value="Rocket League">Rocket League</option>
-                        <option value="Among Us">Among Us</option>
-                        <option value="Fall Guys">Fall Guys</option>
-                        <option value="Minecraft">Minecraft</option>
+                        <option value="Assassin's Creed">Assassin's Creed</option>
+                        <option value="Hitman3-Dubai">Hitman 3 - Dubai</option>
+                        <option value="STALKER 2">STALKER 2</option>
+                        <option value="Ori and the will of the wisps">Ori and the Will of the Wisps</option>
+                        <option value="Hollow Knight">Hollow Knight</option>
+                        <option value="Warframe">Warframe</option>
+                        <option value="Cyberpunk2077">Cyberpunk 2077</option>
+                        <option value="The Callisto Protocol">The Callisto Protocol</option>
+                        <option value="Naraka Bladepoint">Naraka: Bladepoint</option>
+                        <option value="Metro Exodus">Metro Exodus</option>
                     </select>
                 </div>
                 
@@ -465,8 +466,10 @@
         async function checkConnection() {
             try {
                 const { data, error } = await supabase.from('registrations').select('count').limit(1);
+                if (error) throw error;
                 updateConnectionStatus(true);
             } catch (error) {
+                console.error('Connection error:', error);
                 updateConnectionStatus(false);
             }
         }
@@ -513,9 +516,16 @@
                     .from('registrations')
                     .select('*')
                     .eq('wwid', wwid)
-                    .single();
+                    .maybeSingle();
 
-                if (error) throw new Error('User not found. Please check your WWID or register first.');
+                if (error) {
+                    console.error('Database error:', error);
+                    throw new Error('Database error occurred. Please try again.');
+                }
+
+                if (!data) {
+                    throw new Error('User not found. Please check your WWID or register first.');
+                }
 
                 currentUser = data;
 
@@ -533,6 +543,7 @@
                 showAlert(`✅ Profile loaded successfully! Welcome ${currentUser.name}`, 'success');
 
             } catch (error) {
+                console.error('Load profile error:', error);
                 showAlert(`❌ ${error.message}`, 'error');
             } finally {
                 loadBtn.disabled = false;
@@ -554,12 +565,17 @@
 
             try {
                 // Check if user already has an active session
-                const { data: activeSession } = await supabase
+                const { data: activeSession, error: checkError } = await supabase
                     .from('sessions')
                     .select('*')
                     .eq('wwid', currentUser.wwid)
                     .eq('status', 'active')
-                    .single();
+                    .maybeSingle();
+
+                if (checkError) {
+                    console.error('Check active session error:', checkError);
+                    throw new Error('Error checking active sessions. Please try again.');
+                }
 
                 if (activeSession) {
                     throw new Error('You already have an active session. Please end it first.');
@@ -584,7 +600,10 @@
                     .select()
                     .single();
 
-                if (error) throw error;
+                if (error) {
+                    console.error('Insert session error:', error);
+                    throw new Error('Failed to create session. Please try again.');
+                }
 
                 currentSession = data;
 
@@ -603,7 +622,8 @@
                 showAlert(`🎮 Session started! Enjoy playing ${selectedGame}`, 'success');
 
             } catch (error) {
-                showAlert(`❌ Failed to start session: ${error.message}`, 'error');
+                console.error('Start session error:', error);
+                showAlert(`❌ ${error.message}`, 'error');
             } finally {
                 startBtn.disabled = false;
                 startBtn.innerHTML = '🚀 Start Gaming Session';
@@ -633,6 +653,8 @@
 
         // Report crash
         async function reportCrash() {
+            if (!currentSession) return;
+            
             crashCount++;
             updateCounters();
             
@@ -643,27 +665,35 @@
                     game_name: currentSession.game_name,
                     pc_id: pcId,
                     type: 'crash',
-                    description: 'Game crashed',
+                    description: 'Game crashed during session',
                     timestamp: new Date().toISOString()
                 };
 
-                await supabase.from('issues').insert([crashReport]);
+                const { error: insertError } = await supabase.from('issues').insert([crashReport]);
+                if (insertError) throw insertError;
 
                 // Update session crash count
-                await supabase
+                const { error: updateError } = await supabase
                     .from('sessions')
                     .update({ crashes: crashCount })
                     .eq('id', currentSession.id);
+                
+                if (updateError) throw updateError;
 
                 showAlert('💥 Crash reported successfully', 'success');
 
             } catch (error) {
+                console.error('Report crash error:', error);
                 showAlert('❌ Failed to report crash', 'error');
+                crashCount--; // Revert counter
+                updateCounters();
             }
         }
 
         // Report issue
         async function reportIssue() {
+            if (!currentSession) return;
+            
             const description = prompt('Please describe the issue in detail:');
             if (!description || description.trim() === '') return;
 
@@ -681,18 +711,24 @@
                     timestamp: new Date().toISOString()
                 };
 
-                await supabase.from('issues').insert([issueReport]);
+                const { error: insertError } = await supabase.from('issues').insert([issueReport]);
+                if (insertError) throw insertError;
 
                 // Update session issue count
-                await supabase
+                const { error: updateError } = await supabase
                     .from('sessions')
                     .update({ issues: issueCount })
                     .eq('id', currentSession.id);
+                
+                if (updateError) throw updateError;
 
                 showAlert('⚠️ Issue reported successfully', 'success');
 
             } catch (error) {
+                console.error('Report issue error:', error);
                 showAlert('❌ Failed to report issue', 'error');
+                issueCount--; // Revert counter
+                updateCounters();
             }
         }
 
@@ -728,10 +764,15 @@
                     notes: document.getElementById('sessionNotes').value.trim()
                 };
 
-                await supabase
+                const { error } = await supabase
                     .from('sessions')
                     .update(sessionUpdate)
                     .eq('id', currentSession.id);
+
+                if (error) {
+                    console.error('End session error:', error);
+                    throw new Error('Failed to end session properly. Please try again.');
+                }
 
                 // Reset UI
                 document.getElementById('gameSelection').classList.remove('hidden');
@@ -749,7 +790,8 @@
                 showAlert(`🏁 Session ended successfully! Duration: ${hours}h ${minutes}m. Thank you for playing!`, 'success');
 
             } catch (error) {
-                showAlert('❌ Failed to end session properly', 'error');
+                console.error('End session error:', error);
+                showAlert(`❌ ${error.message}`, 'error');
             } finally {
                 endBtn.disabled = false;
                 endBtn.innerHTML = '🏁 End Session';
@@ -785,5 +827,4 @@
         });
     </script>
 </body>
-
 </html>
