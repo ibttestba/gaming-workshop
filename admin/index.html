@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -261,6 +261,12 @@
             color: #2ecc71;
         }
         
+        .alert-error {
+            background: rgba(255, 107, 107, 0.2);
+            border: 2px solid #ff6b6b;
+            color: #ff6b6b;
+        }
+        
         .live-indicator {
             display: inline-block;
             width: 12px;
@@ -465,6 +471,30 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNpbnh3d3l5YmJtaWF3dnlpb2xiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc2ODEwNTgsImV4cCI6MjA4MzI1NzA1OH0.Hwesaju26-i9bEQRQjXXCIDMKFhuvEcA3jP3lhzF4nY';
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+        // Updated games list
+        const GAMES_LIST = [
+            'SOTTR',
+            'Tiny Tina',
+            'Borderlands 3',
+            'Remnant 2',
+            'Far Cry 6',
+            'FF14',
+            'Little Nightmares 3',
+            'Hogwarts',
+            'Homeworld 3',
+            'Spider-Man Remastered',
+            'Assassin\'s Creed',
+            'Hitman3-Dubai',
+            'STALKER 2',
+            'Ori and the will of the wisps',
+            'Hollow Knight',
+            'Warframe',
+            'Cyberpunk2077',
+            'The Callisto Protocol',
+            'Naraka Bladepoint',
+            'Metro Exodus'
+        ];
+
         // Global data storage
         let dashboardData = {
             registrations: [],
@@ -496,7 +526,10 @@
                     .select('*')
                     .order('created_at', { ascending: false });
 
-                if (regError) throw regError;
+                if (regError) {
+                    console.error('Registrations error:', regError);
+                    throw regError;
+                }
 
                 // Load sessions
                 const { data: sessions, error: sessError } = await supabase
@@ -504,7 +537,10 @@
                     .select('*')
                     .order('start_time', { ascending: false });
 
-                if (sessError) throw sessError;
+                if (sessError) {
+                    console.error('Sessions error:', sessError);
+                    throw sessError;
+                }
 
                 // Load issues
                 const { data: issues, error: issuesError } = await supabase
@@ -512,10 +548,17 @@
                     .select('*')
                     .order('timestamp', { ascending: false });
 
-                if (issuesError) throw issuesError;
+                if (issuesError) {
+                    console.error('Issues error:', issuesError);
+                    throw issuesError;
+                }
 
                 // Store data
-                dashboardData = { registrations, sessions, issues };
+                dashboardData = { 
+                    registrations: registrations || [], 
+                    sessions: sessions || [], 
+                    issues: issues || [] 
+                };
 
                 // Update all sections
                 updateStatistics();
@@ -832,15 +875,7 @@
             const gameStats = {};
 
             // Initialize game stats
-            const allGames = [
-                'Shadow of the Tomb Raider', 'Tiny Tina\'s Wonderlands', 'Borderlands 3',
-                'Far Cry 6', 'Final Fantasy XIV', 'Naraka Bladepoint', 'Spider-Man Remastered',
-                'Watch Dogs Legion', 'Cyberpunk 2077', 'Assassin\'s Creed Valhalla',
-                'Call of Duty Modern Warfare II', 'Apex Legends', 'Fortnite', 'Valorant',
-                'League of Legends', 'Overwatch 2', 'Rocket League', 'Among Us', 'Fall Guys', 'Minecraft'
-            ];
-
-            allGames.forEach(game => {
+            GAMES_LIST.forEach(game => {
                 gameStats[game] = {
                     sessions: 0,
                     totalHours: 0,
@@ -980,11 +1015,15 @@
                 return;
             }
             
-            if (!confirm('🚨 This will permanently delete all registrations, sessions, and issues. Type "DELETE" to confirm.')) {
+            const confirmText = prompt('🚨 This will permanently delete all registrations, sessions, and issues. Type "DELETE" to confirm:');
+            if (confirmText !== 'DELETE') {
+                showAlert('❌ Clear operation cancelled', 'info');
                 return;
             }
 
             try {
+                showAlert('🗑️ Clearing all data...', 'info');
+                
                 // Delete all data from Supabase
                 await supabase.from('issues').delete().neq('id', 0);
                 await supabase.from('sessions').delete().neq('id', 0);
@@ -995,6 +1034,7 @@
                 showAlert('🗑️ All data cleared successfully!', 'success');
                 
             } catch (error) {
+                console.error('Clear data error:', error);
                 showAlert(`❌ Failed to clear data: ${error.message}`, 'error');
             }
         }
@@ -1006,5 +1046,4 @@
         loadDashboard();
     </script>
 </body>
-
 </html>
